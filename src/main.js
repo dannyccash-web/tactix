@@ -1621,10 +1621,25 @@ ensureMusicStarted(this);
     });
 
     const pwrHeaderY = listStartY + this.catalog.length * rowH - 18;// tighter gap so Soldiers + Power Ups fit
-    this.add.text(leftX + 20, pwrHeaderY, "POWER UPS", UI.h2);
+    this.add.text(leftX + 20, pwrHeaderY - _pwrShiftUp, "POWER UPS", UI.h2);
 
     const pwrRowH = 110;
-    const pwrRowY = pwrHeaderY + 62;// reduced header-to-row gap
+    const pwrRowY = (pwrHeaderY + 62) - _pwrShiftUp;// reduced header-to-row gap
+    // Responsive clamp: keep POWER UPS section above the READY button on shorter viewports
+    const rowsPlanned = isMineUnlocked() ? 2 : 1;
+    const bottomLimit = h - 150; // leave room for READY button + padding
+    const pwrBottom = (pwrHeaderY + 62) + rowsPlanned * pwrRowH;
+    if (pwrBottom > bottomLimit){
+      const shiftUp = pwrBottom - bottomLimit;
+      // Shift header + rows upward together
+      // (we'll apply by subtracting from the Y values we use below)
+      // eslint-disable-next-line no-unused-vars
+      var _pwrShiftUp = shiftUp;
+    } else {
+      // eslint-disable-next-line no-unused-vars
+      var _pwrShiftUp = 0;
+    }
+
     this.drawPowerUpRow(team, leftX, panelW, pwrRowY, POWER_UPS.med);
 
     // Mine is hidden until unlocked (5 wins)
@@ -1939,6 +1954,8 @@ class BattleScene extends Phaser.Scene {
     this.btnMove = makeArrowButton(this, 0, 0, 160, 44, "1. MOVE", () => this.onMoveButton(), 0x22c55e, 22);
     this.btnAttack= makeArrowButton(this, 0, 0, 190, 44, "2. ATTACK", () => this.onAttackButton(), 0xfbbf24, 22);
     this.btnEnd   = makeArrowButton(this, 0, 0, 205, 44, "3. END TURN", () => this.onEndTurnButton(), 0xef4444, 22);
+    this._btnMoveW = 160; this._btnAttackW = 190; this._btnEndW = 205; this._btnTopH = 44;
+
 
     // Tooltip (unit hover)
     this.tipW = 260;
@@ -3457,14 +3474,30 @@ class BattleScene extends Phaser.Scene {
     this.leftPanelBg.lineStyle(2, 0x5aa9ff, 0.20);
     this.leftPanelBg.strokeRoundedRect(0, 0, panelW, panelH, 14);
 
+    // Responsive top action buttons (MOVE / ATTACK / END TURN)
+    // On narrow viewports, scale the whole cluster down and tighten spacing so it never overlaps BACK/STATS/speaker.
+    const reservedRight = 300; // space for BACK + STATS + speaker + padding
+    const btnBaseGap = 14;
     const btnY = TOPBAR.yCenter;
-    let x = panelX + panelW + 30;
 
-    this.btnMove.container.setPosition(x + 80, btnY);
-    x += 175;
-    this.btnAttack.container.setPosition(x + 95, btnY);
-    x += 215;
-    this.btnEnd.container.setPosition(x + 105, btnY);
+    const startX = panelX + panelW + 30;
+    const totalBaseW = (this._btnMoveW + this._btnAttackW + this._btnEndW) + btnBaseGap * 2;
+    const availW = Math.max(220, w - reservedRight - startX);
+    const s = Math.min(1, availW / totalBaseW);
+
+    // If we're very tight, drop the row slightly so it doesn't visually collide with the right-side topbar cluster.
+    const y = (s < 0.82) ? (btnY + 52) : btnY;
+
+    this.btnMove.container.setScale(s);
+    this.btnAttack.container.setScale(s);
+    this.btnEnd.container.setScale(s);
+
+    let x = startX;
+    this.btnMove.container.setPosition(x + (this._btnMoveW * s)/2, y);
+    x += (this._btnMoveW * s) + (btnBaseGap * s);
+    this.btnAttack.container.setPosition(x + (this._btnAttackW * s)/2, y);
+    x += (this._btnAttackW * s) + (btnBaseGap * s);
+    this.btnEnd.container.setPosition(x + (this._btnEndW * s)/2, y);
 
     this._panelW = panelW;
     this._panelH = panelH;
