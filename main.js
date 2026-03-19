@@ -1379,6 +1379,9 @@ class Board {
 
     let fi = 0;
     while(fi < frontier.length){
+      // Compact array once many entries are consumed to prevent unbounded growth.
+      if (fi > 128){ frontier.splice(0, fi); fi = 0; }
+
       const cur = frontier[fi++];
       if(cur.dist >= maxSteps) continue;
 
@@ -1388,7 +1391,8 @@ class Board {
 
         if (blockedSet && blockedSet.has(key) && key !== startHex.key()) continue;
 
-        if (!visited.has(key) || nd < visited.get(key)){
+        // Visited-once: correct for uniform-cost grids where every step costs 1.
+        if (!visited.has(key)){
           visited.set(key, nd);
           frontier.push({hex:n, dist:nd});
         }
@@ -1408,6 +1412,7 @@ class Board {
 
     let qi = 0;
     while (qi < q.length){
+      if (qi > 128){ q.splice(0, qi); qi = 0; }
       const cur = q[qi++];
       const curK = cur.key();
       for (const n of this.neighbors(cur)){
@@ -2178,6 +2183,8 @@ class BattleScene extends Phaser.Scene {
     this.boardDirty = true;
     this._rosterDirty = true;
     this._lastRosterDrawTime = 0;
+    this._overlayDirty = true;
+    this._lastOverlayDrawTime = 0;
     if (this.ctfEnabled){
       this.flagSprite = this.add.image(0,0,"ctf_flag_token").setOrigin(0.5).setDepth(80);
       // Slightly smaller so it stays inside the tile even when the board is scaled.
@@ -3027,6 +3034,7 @@ class BattleScene extends Phaser.Scene {
         let count = 0;
         let mci = 0;
         while (mci < q.length){
+          if (mci > 128){ q.splice(0, mci); mci = 0; }
           const cur = q[mci++];
           count++;
           const hx = this.board.tiles.get(cur)?.hex;
@@ -4749,6 +4757,12 @@ class BattleScene extends Phaser.Scene {
   }
 
   redrawOverlay(){
+    // Throttle: skip redraw if overlay state hasn't changed.
+    const now = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    if (!this._overlayDirty && this._lastOverlayDrawTime && (now - this._lastOverlayDrawTime) < 100) return;
+    this._overlayDirty = false;
+    this._lastOverlayDrawTime = now;
+
     this.gOverlay.clear();
 
     // Mine placement highlight
@@ -5131,6 +5145,7 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
 
   redrawAll(){
     this._rosterDirty = true;
+    this._overlayDirty = true;
     this.redrawBoard();
     this.positionAllUnits();
     this.redrawOverlay();
