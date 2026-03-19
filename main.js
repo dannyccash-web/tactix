@@ -1377,9 +1377,8 @@ class Board {
     const visited=new Map();
     visited.set(startHex.key(), 0);
 
-    let fi = 0;
-    while(fi < frontier.length){
-      const cur = frontier[fi++];
+    while(frontier.length){
+      const cur = frontier.shift();
       if(cur.dist >= maxSteps) continue;
 
       for(const n of this.neighbors(cur.hex)){
@@ -1406,9 +1405,8 @@ class Board {
     const parent = new Map();
     parent.set(startK, null);
 
-    let qi = 0;
-    while (qi < q.length){
-      const cur = q[qi++];
+    while (q.length){
+      const cur = q.shift();
       const curK = cur.key();
       for (const n of this.neighbors(cur)){
         const k = n.key();
@@ -2176,8 +2174,7 @@ class BattleScene extends Phaser.Scene {
     this._boardTextureKeys = new Set();
     this._boardTextureScaleKey = null;
     this.boardDirty = true;
-    this._rosterDirty = true;
-    this._lastRosterDrawTime = 0;
+    if (this.ctfEnabled){
       this.flagSprite = this.add.image(0,0,"ctf_flag_token").setOrigin(0.5).setDepth(80);
       // Slightly smaller so it stays inside the tile even when the board is scaled.
       this.flagSprite.setScale(0.92);
@@ -3024,9 +3021,8 @@ class BattleScene extends Phaser.Scene {
         const q = [kk];
         seen.add(kk);
         let count = 0;
-        let mci = 0;
-        while (mci < q.length){
-          const cur = q[mci++];
+        while (q.length){
+          const cur = q.shift();
           count++;
           const hx = this.board.tiles.get(cur)?.hex;
           if (!hx) continue;
@@ -3980,11 +3976,6 @@ class BattleScene extends Phaser.Scene {
 
     if (this.phase === this.PHASE_MOVE){
       if (this.moveLocked) return;
-      // Skip BFS recompute if we're re-selecting the same unit with a valid map
-      if (this.selectedSide === this.SIDE_PLAYER && this.selectedIndex === index && this.reachableMap){
-        this._spawnSelectionRing(token);
-        return;
-      }
       this.selectedSide = this.SIDE_PLAYER;
       this.selectedIndex = index;
       this._spawnSelectionRing(token);
@@ -4915,13 +4906,6 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
   }
 
   redrawRosterPanel(){
-    // Throttle: rebuild the roster panel at most every 150 ms to avoid
-    // destroying and recreating dozens of text objects on every redrawAll call.
-    const now = (typeof performance !== "undefined") ? performance.now() : Date.now();
-    if (!this._rosterDirty && this._lastRosterDrawTime && (now - this._lastRosterDrawTime) < 150) return;
-    this._rosterDirty = false;
-    this._lastRosterDrawTime = now;
-
     // Destroy and remove only the dynamic roster children from the container.
     // We must NOT use removeAll(true) because that would also destroy the
     // permanent children (leftPanelBg, rosterG, turnBanner, panelInfo).
@@ -5129,7 +5113,6 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
   }
 
   redrawAll(){
-    this._rosterDirty = true;
     this.redrawBoard();
     this.positionAllUnits();
     this.redrawOverlay();
