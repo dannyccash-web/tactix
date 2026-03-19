@@ -837,7 +837,7 @@ function showMineUnlockOverlay(scene, opts={}){
   overlay.add(badge);
 
   const body = scene.add.text(cx, cy + 62,
-    "YOU'VE UNLOCKED A NEW POWER UP:\nMINE\n\nPlace it on any empty hex.\nUnits that step on (or cross) it take 3 damage,\nand adjacent units take 2 damage.",
+    "YOU'VE UNLOCKED A NEW POWER UP:\nMINE\n\nPlace it on any empty hex.\nUnits that step on (or cross) it take 2 damage,\nand adjacent units take 1 damage.",
     {
       fontFamily: FONT_FAMILY,
       fontSize: "22px",
@@ -881,16 +881,16 @@ function showMineUnlockOverlay(scene, opts={}){
    ============================ */
 
 const BASE_UNITS = {
-  infantry:  { id: "infantry",  name: "INFANTRY",      cost: 2, speed: 5, range: 2, atk: 1, def: 1, dmg: 2, hp: 6 },
-  sniper:    { id: "sniper",    name: "SNIPER",        cost: 4, speed: 3, range: 5, atk: 3, def: 0, dmg: 3, hp: 5 },
-  grenadier: { id: "grenadier", name: "GRENADIER",     cost: 6, speed: 2, range: 4, atk: 2, def: 3, dmg: 5, hp: 7 },
-  elite:     { id: "elite",     name: "ELITE",         cost: 6, speed: 7, range: 3, atk: 5, def: 2, dmg: 4, hp: 7 },
-  shock:     { id: "shock",     name: "SHOCK TROOPER", cost: 6, speed: 5, range: 1, atk: 4, def: 3, dmg: 4, hp: 7 },
+  infantry:  { id: "infantry",  name: "INFANTRY",      cost: 2, speed: 5, range: 2, atk: 1, def: 1, dmg: 2, hp: 5 },
+  sniper:    { id: "sniper",    name: "SNIPER",        cost: 4, speed: 3, range: 5, atk: 3, def: 0, dmg: 3, hp: 4 },
+  grenadier: { id: "grenadier", name: "GRENADIER",     cost: 6, speed: 2, range: 4, atk: 2, def: 3, dmg: 5, hp: 6 },
+  elite:     { id: "elite",     name: "ELITE",         cost: 6, speed: 7, range: 3, atk: 5, def: 2, dmg: 4, hp: 6 },
+  shock:     { id: "shock",     name: "SHOCK TROOPER", cost: 6, speed: 5, range: 1, atk: 4, def: 3, dmg: 4, hp: 6 },
 };
 
 const POWER_UPS = {
   med:  { id: "med",  name: "MED PACK", cost: 1, desc: "RESTORE 3 HP (ONE TIME)" },
-  mine: { id: "mine", name: "MINE",     cost: 1, desc: "PLACE A MINE (3 DMG + 2 SPLASH)" },
+  mine: { id: "mine", name: "MINE",     cost: 1, desc: "PLACE A MINE (2 DMG + SPLASH)" },
 };
 const POWERUP_LIMIT = 5;
 
@@ -1377,8 +1377,9 @@ class Board {
     const visited=new Map();
     visited.set(startHex.key(), 0);
 
-    while(frontier.length){
-      const cur = frontier.shift();
+    let fi = 0;
+    while(fi < frontier.length){
+      const cur = frontier[fi++];
       if(cur.dist >= maxSteps) continue;
 
       for(const n of this.neighbors(cur.hex)){
@@ -1405,8 +1406,9 @@ class Board {
     const parent = new Map();
     parent.set(startK, null);
 
-    while (q.length){
-      const cur = q.shift();
+    let qi = 0;
+    while (qi < q.length){
+      const cur = q[qi++];
       const curK = cur.key();
       for (const n of this.neighbors(cur)){
         const k = n.key();
@@ -1439,9 +1441,6 @@ class Board {
 class TitleScene extends Phaser.Scene {
   constructor() { super("TitleScene"); }
   preload() {
-    const base = (window.__TACTIX_BASE__ || "./").replace(/\\/g, "/");
-    this.load.setPath(base);
-
     this.load.image("titleBg", "tactix-title-bg.jpg");
     this.load.image("logo", "tactix-logo.png");
     this.load.image("battleBg", "tactix-battlefield.jpg");
@@ -1449,15 +1448,11 @@ class TitleScene extends Phaser.Scene {
     this.load.image("thumbAzure", "assets/azure-soldier.png");
     this.load.image("thumbPhlox", "assets/phlox-soldier.png");
     this.load.image("thumbVermillion", "assets/vermillion-soldier.png");
-    this.load.image("board_dirt_texture", "assets/dirt_texture.png");
-    this.load.image("board_rock_texture", "assets/rock_texture.png");
 
     this.load.audio("music_theme", ["assets/audio/tactix-theme.mp3"]);
 
     this.load.audio("music_score", ["assets/audio/tactix_score.mp3"]);
     this.load.audio("sfx_hit", ["assets/audio/Gun_Shot.mp3"]);
-    this.load.audio("sfx_explosion", ["assets/audio/mixkit-fuel-explosion-1705.mp3"]);
-    this.load.audio("sfx_shock_hit", ["assets/audio/mixkit-electricity-static-power-up-2600.mp3"]);
     this.load.audio("sfx_miss", ["assets/audio/Gun_Ricochet.mp3"]);
     this.load.audio("sfx_win", ["assets/audio/tactix_win.mp3"]);
     this.load.audio("sfx_loss", ["assets/audio/tactix_loss.mp3"]);
@@ -1707,13 +1702,13 @@ ensureMusicStarted(this);
 
     const gap = 24;
     const panelW = Math.min(760, Math.floor(w * 0.60));
-    const panelH = Math.min(720, h - 240);
+    const panelH = Math.min(650, h - 300);
     const rightW = Math.max(340, Math.min(440, Math.floor(w * 0.30)));
 
     const totalW = panelW + gap + rightW;
     const leftX = Math.max(40, Math.floor((w - totalW) / 2));
     const rightX = leftX + panelW + gap;
-    const topY = 142;
+    const topY = 150;
 
     this.leftPanel = { x: leftX, y: topY, w: panelW, h: panelH };
     this.rightPanel = { x: rightX, y: topY, w: rightW, h: panelH };
@@ -1743,16 +1738,16 @@ ensureMusicStarted(this);
       }
     });
 
-    // Left panel: compact layout so all soldiers + power ups fit cleanly on one screen.
-    const listStartY = topY + 74;
-    const rowH = 96;
+    // Left panel: no scrolling needed (only 3 soldiers + 1 power up)
+    const listStartY = topY + 82;
+    const rowH = 110;
 
     this.catalog.forEach((u, idx) => {
       const y = listStartY + idx * rowH;
 
       const badgeKey = `badge_${team}_${u.id}`;
       const badge = this.add.image(leftX + 62, y, badgeKey).setOrigin(0.5);
-      badge.setScale(0.84);
+      badge.setScale(0.92);
 
       this.add.text(leftX + 120, y - 36, u.name, UI.h2);
 
@@ -1772,11 +1767,11 @@ ensureMusicStarted(this);
       makeButton(this, leftX + panelW - 150, y, 130, 46, "ADD", () => this.addUnit(u), 0x22c55e, 22);
     });
 
-    const pwrHeaderY = listStartY + this.catalog.length * rowH - 8;
+    const pwrHeaderY = listStartY + this.catalog.length * rowH - 18;// tighter gap so Soldiers + Power Ups fit
     this.add.text(leftX + 20, pwrHeaderY, "POWER UPS", UI.h2);
 
-    const pwrRowH = 92;
-    const pwrRowY = pwrHeaderY + 54;
+    const pwrRowH = 110;
+    const pwrRowY = pwrHeaderY + 62;// reduced header-to-row gap
     this.drawPowerUpRow(team, leftX, panelW, pwrRowY, POWER_UPS.med);
 
     // Mine is hidden until unlocked (5 wins)
@@ -1813,7 +1808,7 @@ ensureMusicStarted(this);
   drawPowerUpRow(team, leftX, panelW, y, pwrDef){
     const badgeKey = `pwr_${team}_${pwrDef.id}`;
     const badge = this.add.image(leftX + 62, y, badgeKey).setOrigin(0.5);
-    badge.setScale(0.88);
+    badge.setScale(0.98);
 
     this.add.text(leftX + 120, y - 22, pwrDef.name, UI.h2);
 
@@ -2175,13 +2170,14 @@ class BattleScene extends Phaser.Scene {
     this.boardContainer = this.add.container(0, 0).setDepth(0);
     this.boardTileLayer = this.add.container(0, 0).setDepth(0);
     this.boardBaseLayer = this.add.container(0, 0).setDepth(1);
-    this.gBoard = this.add.graphics().setDepth(0).setVisible(true);
+    this.gBoard = this.add.graphics().setDepth(0).setVisible(false);
     this.gOverlay = this.add.graphics().setDepth(20);
-    this.boardContainer.add([this.gBoard, this.boardTileLayer, this.boardBaseLayer, this.gOverlay]);
+    this.boardContainer.add([this.boardTileLayer, this.boardBaseLayer, this.gOverlay]);
     this._boardTextureKeys = new Set();
     this._boardTextureScaleKey = null;
     this.boardDirty = true;
-    if (this.ctfEnabled){
+    this._rosterDirty = true;
+    this._lastRosterDrawTime = 0;
       this.flagSprite = this.add.image(0,0,"ctf_flag_token").setOrigin(0.5).setDepth(80);
       // Slightly smaller so it stays inside the tile even when the board is scaled.
       this.flagSprite.setScale(0.92);
@@ -2194,11 +2190,10 @@ class BattleScene extends Phaser.Scene {
 
     this.blasts = this.add.container(0,0).setDepth(60);
 
-    // Reachable tiles use static overlays only (no shimmer animation for performance).
+    // Animated shimmer for reachable hex highlights
     this.gShimmer = this.add.graphics().setDepth(21);
     this._shimmerAlpha = 0.22;
     this._shimmerDir = 1;
-    this.gShimmer.setVisible(false);
 
     // Projectile/tracer layer
     this.gTracer = this.add.graphics().setDepth(55);
@@ -2402,13 +2397,8 @@ class BattleScene extends Phaser.Scene {
             break;
           }
 
-          // CTF flag pickup: once a unit grabs the flag, stop the current move so
-          // carriers never continue past the pickup and exceed the 2-space cap.
-          if (this.ctfEnabled){
-            const wasCarrier = this.isFlagCarrier(unit);
-            this.tryPickupFlag(unit);
-            if (!wasCarrier && this.isFlagCarrier(unit)) break;
-          }
+          // CTF flag pickup
+          if (this.ctfEnabled) this.tryPickupFlag(unit);
 
           if (!unit.alive) break;
         }
@@ -3034,8 +3024,9 @@ class BattleScene extends Phaser.Scene {
         const q = [kk];
         seen.add(kk);
         let count = 0;
-        while (q.length){
-          const cur = q.shift();
+        let mci = 0;
+        while (mci < q.length){
+          const cur = q[mci++];
           count++;
           const hx = this.board.tiles.get(cur)?.hex;
           if (!hx) continue;
@@ -3140,8 +3131,28 @@ class BattleScene extends Phaser.Scene {
   flashYourTurnBanner(){
     if (!this.turnBanner) return;
     this.tweens.killTweensOf(this.turnBanner);
-    // Keep the banner static to avoid unnecessary tween work at turn start.
     this.turnBanner.setAlpha(1).setScale(1);
+
+    // Scale pop + flash
+    this.tweens.add({
+      targets: this.turnBanner,
+      scaleX: 1.18,
+      scaleY: 1.18,
+      duration: 120,
+      yoyo: true,
+      ease: "Back.easeOut",
+      onComplete: () => {
+        this.tweens.add({
+          targets: this.turnBanner,
+          alpha: 0.30,
+          duration: 160,
+          yoyo: true,
+          repeat: 3,
+          ease: "Sine.easeInOut",
+          onComplete: () => this.turnBanner.setAlpha(1)
+        });
+      }
+    });
   }
 
   tweenUnitToHex(unit, hex, duration=150){
@@ -3270,14 +3281,7 @@ class BattleScene extends Phaser.Scene {
           break;
         }
 
-        if (this.ctfEnabled){
-          const wasCarrier = this.isFlagCarrier(u);
-          this.tryPickupFlag(u);
-          if (!wasCarrier && this.isFlagCarrier(u)) {
-            unitRemaining = 0;
-            break;
-          }
-        }
+        if (this.ctfEnabled) this.tryPickupFlag(u);
         if (this.checkWinLose()) return;
 
         await new Promise(r => this.time.delayedCall(20, r));
@@ -3390,16 +3394,56 @@ class BattleScene extends Phaser.Scene {
     unit.hp -= amount;
     if (unit.hp <= 0){
       unit.alive = false;
-      unit.go.setAlpha(1);
-      unit.go.setScale(1);
-      unit.go.setVisible(false);
+
+      // Death flash: white flash then fade out
+      const flashG = this.add.graphics().setDepth(130);
+      const p = this.layout.hexToPixel(unit.hex);
+      flashG.fillStyle(0xffffff, 0.85);
+      flashG.fillCircle(0, 0, 38);
+      flashG.setPosition(unit.go.x, unit.go.y);
+      this.tweens.add({
+        targets: flashG,
+        alpha: 0,
+        scaleX: 2.2,
+        scaleY: 2.2,
+        duration: 380,
+        ease: "Quad.easeOut",
+        onComplete: () => flashG.destroy()
+      });
+
+      // Unit fade out
+      this.tweens.add({
+        targets: unit.go,
+        alpha: 0,
+        scaleX: 0.6,
+        scaleY: 0.6,
+        duration: 320,
+        ease: "Back.easeIn",
+        onComplete: () => unit.go.setVisible(false)
+      });
+
       unit.hit.disableInteractive();
+      // If a flag carrier is killed, drop the flag on their tile
       if (this.ctfEnabled && unit.carriesFlag){
         this.dropFlagAt(unit.hex, unit);
       }
-    } else if (unit.badge) {
-      unit.badge.setAlpha(1);
-      unit.badge.setScale(0.78);
+
+      // Strong shake on kill
+      this.cameras.main.shake(200, 0.008);
+    } else {
+      // Hit shake — lighter
+      this.cameras.main.shake(90, 0.004);
+
+      // Quick damage flash on the unit badge
+      this.tweens.add({
+        targets: unit.badge,
+        alpha: 0.15,
+        duration: 60,
+        yoyo: true,
+        repeat: 2,
+        ease: "Sine.easeInOut",
+        onComplete: () => { if (unit.badge) unit.badge.setAlpha(1); }
+      });
     }
     unit.redraw();
   }
@@ -3443,8 +3487,14 @@ class BattleScene extends Phaser.Scene {
     unit.flagPulseG.closePath();
     unit.flagPulseG.strokePath();
 
-    if (unit.flagPulseTween){ unit.flagPulseTween.stop(); unit.flagPulseTween = null; }
-    unit.flagPulseG.setAlpha(0.9);
+    if (unit.flagPulseTween) unit.flagPulseTween.stop();
+    unit.flagPulseTween = this.tweens.add({
+      targets: unit.flagPulseG,
+      alpha: { from: 0.15, to: 0.95 },
+      duration: 520,
+      yoyo: true,
+      repeat: -1
+    });
 
     this.flagHex = null;
     this.positionAllUnits();
@@ -3570,8 +3620,10 @@ class BattleScene extends Phaser.Scene {
     this.mines = (this.mines || []).filter(m => m !== mineObj);
 
     // Mine destroyed SFX + scorch mark
-    playSFX(this, this.getMineExplosionSfxKey(), 0.38, true);
+    playSFX(this, "sfx_hit", 0.38, true);
     this.spawnBlastAtHex(hex);
+    // Big shake for mine explosion
+    this.cameras.main.shake(280, 0.012);
 
     // small blast flash
     const p = this.layout.hexToPixel(hex);
@@ -3592,19 +3644,19 @@ class BattleScene extends Phaser.Scene {
 
     if (cause === "step"){
       if (triggerUnit && triggerUnit.alive){
-        this.applyDamageToUnit(triggerUnit, 3);
+        this.applyDamageToUnit(triggerUnit, 2);
       }
       for (const u of allUnits){
         if (!u.alive) continue;
         if (neighbors.includes(u.hex.key())){
-          this.applyDamageToUnit(u, 2);
+          this.applyDamageToUnit(u, 1);
         }
       }
     } else if (cause === "attack"){
       for (const u of allUnits){
         if (!u.alive) continue;
         if (neighbors.includes(u.hex.key())){
-          this.applyDamageToUnit(u, 2);
+          this.applyDamageToUnit(u, 1);
         }
       }
     }
@@ -3635,16 +3687,6 @@ class BattleScene extends Phaser.Scene {
     // Tracer animation removed — the per-frame addEvent loop + fade tween
     // added ~240ms of blocking await per attack and was a noticeable source of lag.
     return Promise.resolve();
-  }
-
-  getMineExplosionSfxKey(){
-    return this.cache?.audio?.exists("sfx_explosion") ? "sfx_explosion" : "sfx_hit";
-  }
-
-  getAttackHitSfxKey(attacker){
-    if (this.cache?.audio?.exists("sfx_explosion") && attacker?.data?.id === "grenadier") return "sfx_explosion";
-    if (this.cache?.audio?.exists("sfx_shock_hit") && attacker?.data?.id === "shock") return "sfx_shock_hit";
-    return "sfx_hit";
   }
 
   spawnBlastAtHex(hex){
@@ -3709,8 +3751,7 @@ class BattleScene extends Phaser.Scene {
 
     await new Promise(r => this.time.delayedCall(ATTACK_POP_ROLL_MS + ATTACK_POP_PAUSE_MS + 250, r));
 
-    const hitSfx = this.getAttackHitSfxKey(attacker);
-    playSFX(this, out.hit ? hitSfx : "sfx_miss", out.hit ? 0.45 : 0.7, true);
+    playSFX(this, out.hit ? "sfx_hit" : "sfx_miss", out.hit ? 0.45 : 0.7, true);
 
     if (out.hit){
       this.spawnBlastAtHex(defender.hex);
@@ -3939,6 +3980,11 @@ class BattleScene extends Phaser.Scene {
 
     if (this.phase === this.PHASE_MOVE){
       if (this.moveLocked) return;
+      // Skip BFS recompute if we're re-selecting the same unit with a valid map
+      if (this.selectedSide === this.SIDE_PLAYER && this.selectedIndex === index && this.reachableMap){
+        this._spawnSelectionRing(token);
+        return;
+      }
       this.selectedSide = this.SIDE_PLAYER;
       this.selectedIndex = index;
       this._spawnSelectionRing(token);
@@ -3960,33 +4006,55 @@ class BattleScene extends Phaser.Scene {
   _spawnSelectionRing(token){
     if (this._selectionRing){ try { this._selectionRing.destroy(); } catch(e){} }
 
-    // Static selection glow only; no pulse tween.
+    // White hex glow that pulses around the unit's tile
     const glow = this.add.graphics().setDepth(115);
     glow.setPosition(token.go.x, token.go.y);
     this._selectionRing = glow;
     this._selectionRingToken = token;
 
-    const s = this.layout.size;
-    glow.fillStyle(0xffffff, 0.12);
-    glow.beginPath();
-    for (let i = 0; i < 6; i++){
-      const a = (Math.PI / 180) * (60 * i);
-      const px = Math.cos(a) * (s + 4);
-      const py = Math.sin(a) * (s + 4);
-      i === 0 ? glow.moveTo(px, py) : glow.lineTo(px, py);
-    }
-    glow.closePath();
-    glow.fillPath();
-    glow.lineStyle(3, 0xffffff, 0.9);
-    glow.beginPath();
-    for (let i = 0; i < 6; i++){
-      const a = (Math.PI / 180) * (60 * i);
-      const px = Math.cos(a) * (s + 2);
-      const py = Math.sin(a) * (s + 2);
-      i === 0 ? glow.moveTo(px, py) : glow.lineTo(px, py);
-    }
-    glow.closePath();
-    glow.strokePath();
+    const drawHexGlow = (alpha) => {
+      glow.clear();
+      const s = this.layout.size;
+      // Outer soft glow fill
+      glow.fillStyle(0xffffff, alpha * 0.18);
+      glow.beginPath();
+      for (let i = 0; i < 6; i++){
+        const a = (Math.PI / 180) * (60 * i);
+        const px = Math.cos(a) * (s + 4);
+        const py = Math.sin(a) * (s + 4);
+        i === 0 ? glow.moveTo(px, py) : glow.lineTo(px, py);
+      }
+      glow.closePath();
+      glow.fillPath();
+      // Bright white hex outline
+      glow.lineStyle(3, 0xffffff, alpha);
+      glow.beginPath();
+      for (let i = 0; i < 6; i++){
+        const a = (Math.PI / 180) * (60 * i);
+        const px = Math.cos(a) * (s + 2);
+        const py = Math.sin(a) * (s + 2);
+        i === 0 ? glow.moveTo(px, py) : glow.lineTo(px, py);
+      }
+      glow.closePath();
+      glow.strokePath();
+    };
+
+    // Draw at full alpha initially; tween drives re-draws via onUpdate
+    drawHexGlow(1.0);
+    this._selectionGlowAlpha = 1.0;
+
+    this.tweens.add({
+      targets: this._selectionRing,
+      alpha: { from: 1.0, to: 0.35 },
+      duration: 560,
+      yoyo: true,
+      repeat: -1,
+      ease: "Sine.easeInOut",
+      onUpdate: (tween) => {
+        const a = tween.getValue();
+        drawHexGlow(a);
+      }
+    });
   }
 
   _clearSelectionRing(){
@@ -4512,178 +4580,167 @@ class BattleScene extends Phaser.Scene {
     const corners = this.layout.hexCorners(cx, cy);
     const outline = 0x3a4653;
 
-    const makeTexturedHex = (sourceKey, outKey, opts = {}) => {
-      if (this.textures.exists(outKey)) return outKey;
-      const srcImg = this.textures.get(sourceKey)?.getSourceImage?.();
-      if (!srcImg) return null;
+    const makeWalkable = (variant) => this._makeBoardTexture((g) => {
+      const seedObj = { v: 1000 + variant * 977 };
+      const baseVariance = (this.rndFromSeed(seedObj) - 0.5) * 0.06;
+      g.fillStyle(0xcbbf9a, 0.95 + baseVariance);
+      this._drawHexPathOnGraphics(g, corners);
+      g.fillPath();
 
-      const canvasTex = this.textures.createCanvas(outKey, w, h);
-      const ctx = canvasTex.getContext();
-      ctx.clearRect(0, 0, w, h);
+      this.drawTanTileDust(`walk_${variant}`, corners);
 
-      if (opts.shadow){
-        const off = Math.max(2, Math.round(this.layout.size * 0.12));
-        ctx.save();
-        ctx.globalAlpha = 0.24;
-        ctx.beginPath();
-        ctx.moveTo(corners[0].x + off, corners[0].y + off);
-        for (let i = 1; i < 6; i++) ctx.lineTo(corners[i].x + off, corners[i].y + off);
-        ctx.closePath();
-        ctx.fillStyle = '#000000';
-        ctx.fill();
-        ctx.restore();
+      const variantType = variant % 10;
+      if (variantType === 0){
+        for (let b=0;b<4;b++){
+          const bx = cx + (this.rndFromSeed(seedObj)-0.5) * this.layout.size * 0.8;
+          const by = cy + (this.rndFromSeed(seedObj)-0.5) * this.layout.size * 0.8;
+          const br = 2 + this.rndFromSeed(seedObj) * 3;
+          g.fillStyle(0x4a7a3a, 0.32);
+          g.fillCircle(bx, by, br);
+        }
+      } else if (variantType === 1){
+        for (let c=0;c<3;c++){
+          const cx0 = cx + (this.rndFromSeed(seedObj)-0.5)*this.layout.size*0.9;
+          const cy0 = cy + (this.rndFromSeed(seedObj)-0.5)*this.layout.size*0.9;
+          const ang = this.rndFromSeed(seedObj) * Math.PI;
+          const len = this.layout.size * 0.25;
+          g.lineStyle(1, 0x8b6914, 0.30);
+          g.beginPath();
+          g.moveTo(cx0, cy0);
+          g.lineTo(cx0 + Math.cos(ang)*len, cy0 + Math.sin(ang)*len);
+          g.strokePath();
+        }
       }
 
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < 6; i++) ctx.lineTo(corners[i].x, corners[i].y);
-      ctx.closePath();
-      ctx.clip();
+      g.lineStyle(4, 0x000000, 0.06);
+      this._drawHexPathOnGraphics(g, corners);
+      g.strokePath();
 
-      if (opts.baseFill){
-        ctx.fillStyle = opts.baseFill;
-        ctx.globalAlpha = opts.baseAlpha ?? 1;
-        ctx.fillRect(0, 0, w, h);
-        ctx.globalAlpha = 1;
+      g.lineStyle(2, outline, 0.70);
+      this._drawHexPathOnGraphics(g, corners);
+      g.strokePath();
+    }, `board_walk_${scaleKey}_${variant}`, w, h);
+
+    const makeObstacle = (variant) => this._makeBoardTexture((g) => {
+      const seedObj = { v: 3000 + variant * 1319 };
+      const baseVariance = (this.rndFromSeed(seedObj) - 0.5) * 0.06;
+      const shadowOff = Math.max(2, this.layout.size * 0.12);
+
+      g.fillStyle(0x000000, 0.30);
+      g.beginPath();
+      g.moveTo(corners[0].x + shadowOff, corners[0].y + shadowOff);
+      for (let i=1;i<6;i++) g.lineTo(corners[i].x + shadowOff, corners[i].y + shadowOff);
+      g.closePath();
+      g.fillPath();
+
+      g.fillStyle(0x6b7280, 0.95 + baseVariance);
+      this._drawHexPathOnGraphics(g, corners);
+      g.fillPath();
+
+      this.drawObstacleSpeckle(`ob_${variant}`, corners);
+
+      g.lineStyle(3, 0xffffff, 0.22);
+      g.beginPath();
+      g.moveTo(corners[4].x, corners[4].y);
+      g.lineTo(corners[5].x, corners[5].y);
+      g.lineTo(corners[0].x, corners[0].y);
+      g.lineTo(corners[1].x, corners[1].y);
+      g.strokePath();
+
+      g.lineStyle(3, 0x000000, 0.32);
+      g.beginPath();
+      g.moveTo(corners[1].x, corners[1].y);
+      g.lineTo(corners[2].x, corners[2].y);
+      g.lineTo(corners[3].x, corners[3].y);
+      g.lineTo(corners[4].x, corners[4].y);
+      g.strokePath();
+
+      g.lineStyle(5, 0x000000, 0.12);
+      this._drawHexPathOnGraphics(g, corners);
+      g.strokePath();
+
+      for (let i=0;i<10;i++){
+        const rx = (this.rndFromSeed(seedObj)-0.5) * this.layout.size * 1.0;
+        const ry = (this.rndFromSeed(seedObj)-0.5) * this.layout.size * 1.0;
+        const rr = 1.2 + this.rndFromSeed(seedObj) * 2.2;
+        g.fillStyle(0x000000, 0.14);
+        g.fillCircle(cx + rx, cy + ry, rr);
       }
 
-      const rotations = opts.rotations || [0];
-      const rotDeg = rotations[opts.variant % rotations.length];
-      const rot = rotDeg * Math.PI / 180;
-      const textureScale = opts.textureScale || 1.35;
-      const drawW = srcImg.width * textureScale;
-      const drawH = srcImg.height * textureScale;
-      const offsetX = ((opts.variant * 37) % 23) - 11;
-      const offsetY = ((opts.variant * 53) % 19) - 9;
+      g.lineStyle(2, outline, 0.85);
+      this._drawHexPathOnGraphics(g, corners);
+      g.strokePath();
+    }, `board_obstacle_${scaleKey}_${variant}`, w, h);
 
-      ctx.translate(cx + offsetX, cy + offsetY);
-      ctx.rotate(rot);
-      ctx.drawImage(srcImg, -drawW / 2, -drawH / 2, drawW, drawH);
-      ctx.rotate(-rot);
-      ctx.translate(-(cx + offsetX), -(cy + offsetY));
+    const makeBase = (team) => this._makeBoardTexture((g) => {
+      const accent = teamColorHex(team);
+      const seedObj = { v: 5000 + team.length * 733 };
 
-      if (opts.overlay){
-        ctx.fillStyle = opts.overlay;
-        ctx.globalAlpha = opts.overlayAlpha ?? 0.18;
-        ctx.fillRect(0, 0, w, h);
-        ctx.globalAlpha = 1;
+      g.fillStyle(accent, 0.32);
+      this._drawHexPathOnGraphics(g, corners);
+      g.fillPath();
+
+      g.lineStyle(7, 0xffffff, 0.16);
+      g.beginPath();
+      g.moveTo(corners[4].x, corners[4].y);
+      g.lineTo(corners[5].x, corners[5].y);
+      g.lineTo(corners[0].x, corners[0].y);
+      g.lineTo(corners[1].x, corners[1].y);
+      g.strokePath();
+
+      g.lineStyle(7, 0x000000, 0.26);
+      g.beginPath();
+      g.moveTo(corners[1].x, corners[1].y);
+      g.lineTo(corners[2].x, corners[2].y);
+      g.lineTo(corners[3].x, corners[3].y);
+      g.lineTo(corners[4].x, corners[4].y);
+      g.strokePath();
+
+      for (let i=0;i<10;i++){
+        const rx = (this.rndFromSeed(seedObj)-0.5) * this.layout.size * 1.0;
+        const ry = (this.rndFromSeed(seedObj)-0.5) * this.layout.size * 1.0;
+        const rr = 1.2 + this.rndFromSeed(seedObj) * 2.2;
+        g.fillStyle(0x000000, 0.14);
+        g.fillCircle(cx + rx, cy + ry, rr);
       }
+    }, `board_base_${scaleKey}_${team}`, w, h);
 
-      ctx.restore();
-
-      ctx.save();
-      ctx.beginPath();
-      ctx.moveTo(corners[0].x, corners[0].y);
-      for (let i = 1; i < 6; i++) ctx.lineTo(corners[i].x, corners[i].y);
-      ctx.closePath();
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = 'rgba(58,70,83,0.85)';
-      ctx.stroke();
-      ctx.restore();
-
-      if (opts.baseLine){
-        const inner = corners.map(({x, y}) => ({
-          x: cx + (x - cx) * 0.62,
-          y: cy + (y - cy) * 0.62
-        }));
-        ctx.save();
-        ctx.beginPath();
-        ctx.moveTo(inner[0].x, inner[0].y);
-        for (let i = 1; i < 6; i++) ctx.lineTo(inner[i].x, inner[i].y);
-        ctx.closePath();
-        ctx.lineWidth = 4;
-        ctx.strokeStyle = opts.baseLine;
-        ctx.stroke();
-        ctx.restore();
-      }
-
-      canvasTex.refresh();
-      this._boardTextureKeys.add(outKey);
-      return outKey;
-    };
-
-    const walkRotations = [0, 23, 47, 71, 103, 131, 167, 197, 223, 251, 281, 317];
-    const rockRotations = [0, 29, 61, 97, 139, 181, 227, 269];
-
-    this._boardWalkTextures = Array.from({ length: walkRotations.length }, (_, i) =>
-      makeTexturedHex('board_dirt_texture', `board_walk_${scaleKey}_${i}`, {
-        variant: i,
-        rotations: walkRotations,
-        textureScale: Math.max(w / (this.textures.get('board_dirt_texture').getSourceImage().width * 0.72), h / (this.textures.get('board_dirt_texture').getSourceImage().height * 0.72)),
-        baseFill: '#cbbf9a',
-        baseAlpha: 0.34
-      })
-    );
-
-    this._boardObstacleTextures = Array.from({ length: rockRotations.length }, (_, i) =>
-      makeTexturedHex('board_rock_texture', `board_obstacle_${scaleKey}_${i}`, {
-        variant: i,
-        rotations: rockRotations,
-        textureScale: Math.max(w / (this.textures.get('board_rock_texture').getSourceImage().width * 0.70), h / (this.textures.get('board_rock_texture').getSourceImage().height * 0.70)),
-        baseFill: '#6b7280',
-        baseAlpha: 0.30,
-        overlay: '#000000',
-        overlayAlpha: 0.08,
-        shadow: true
-      })
-    );
-
+    this._boardWalkTextures = Array.from({ length: 10 }, (_, i) => makeWalkable(i));
+    this._boardObstacleTextures = Array.from({ length: 6 }, (_, i) => makeObstacle(i));
     this._boardBaseTextures = {
-      [this.playerTeam]: makeTexturedHex('board_dirt_texture', `board_base_${scaleKey}_${this.playerTeam}`, {
-        variant: 100,
-        rotations: walkRotations,
-        textureScale: Math.max(w / (this.textures.get('board_dirt_texture').getSourceImage().width * 0.72), h / (this.textures.get('board_dirt_texture').getSourceImage().height * 0.72)),
-        baseFill: '#cbbf9a',
-        baseAlpha: 0.28,
-        overlay: Phaser.Display.Color.IntegerToColor(teamColorHex(this.playerTeam)).rgba,
-        overlayAlpha: 0.18,
-        baseLine: Phaser.Display.Color.IntegerToColor(teamColorHex(this.playerTeam)).rgba.replace(',1)', ',0.55)')
-      }),
-      [this.aiTeam]: makeTexturedHex('board_dirt_texture', `board_base_${scaleKey}_${this.aiTeam}`, {
-        variant: 101,
-        rotations: walkRotations,
-        textureScale: Math.max(w / (this.textures.get('board_dirt_texture').getSourceImage().width * 0.72), h / (this.textures.get('board_dirt_texture').getSourceImage().height * 0.72)),
-        baseFill: '#cbbf9a',
-        baseAlpha: 0.28,
-        overlay: Phaser.Display.Color.IntegerToColor(teamColorHex(this.aiTeam)).rgba,
-        overlayAlpha: 0.18,
-        baseLine: Phaser.Display.Color.IntegerToColor(teamColorHex(this.aiTeam)).rgba.replace(',1)', ',0.55)')
-      })
+      [this.playerTeam]: makeBase(this.playerTeam),
+      [this.aiTeam]: makeBase(this.aiTeam)
     };
   }
 
   redrawBoard(){
     if (!this.boardDirty) return;
 
-    this._ensureBoardTextures();
     this.boardTileLayer.removeAll(true);
     this.boardBaseLayer.removeAll(true);
-    this.gBoard.clear();
-
-    const walkCount = this._boardWalkTextures?.length || 1;
-    const obstacleCount = this._boardObstacleTextures?.length || 1;
+    this._ensureBoardTextures();
 
     for (const t of this.board.tiles.values()){
-      const key = t.hex.key();
       const p = this.layout.hexToPixel(t.hex);
+      const key = t.hex.key();
+      const seed = this.tileSeeds.get(key) ?? this.seedFromKey(key);
       const isObstacle = this.obstacles.has(key);
-      const isBase = this.ctfEnabled && !isObstacle && (this.playerBase.has(key) || this.aiBase.has(key));
 
-      let textureKey = null;
       if (isObstacle){
-        const idx = Math.abs(this.seedFromKey(key)) % obstacleCount;
-        textureKey = this._boardObstacleTextures[idx];
-      } else if (isBase){
-        textureKey = this.playerBase.has(key) ? this._boardBaseTextures[this.playerTeam] : this._boardBaseTextures[this.aiTeam];
-      } else {
-        const idx = Math.abs(this.seedFromKey(key)) % walkCount;
-        textureKey = this._boardWalkTextures[idx];
+        const tex = this._boardObstacleTextures[Math.abs(seed) % this._boardObstacleTextures.length];
+        this.boardTileLayer.add(this.add.image(p.x, p.y, tex).setOrigin(0.5));
+        continue;
       }
 
-      if (textureKey){
-        const img = this.add.image(p.x, p.y, textureKey).setOrigin(0.5).setDepth(0);
-        this.boardTileLayer.add(img);
+      const walkTex = this._boardWalkTextures[Math.abs(seed) % this._boardWalkTextures.length];
+      this.boardTileLayer.add(this.add.image(p.x, p.y, walkTex).setOrigin(0.5));
+
+      if (this.ctfEnabled && (this.playerBase.has(key) || this.aiBase.has(key))){
+        const team = this.playerBase.has(key) ? this.playerTeam : this.aiTeam;
+        const baseTex = this._boardBaseTextures[team];
+        if (baseTex){
+          this.boardBaseLayer.add(this.add.image(p.x, p.y, baseTex).setOrigin(0.5));
+        }
       }
     }
 
@@ -4823,11 +4880,18 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
       if (!enemy || !enemy.alive) continue;
       if (enemy.targetG) enemy.targetG.clear();
       if (this.activeSide === "player" && this.phase === this.PHASE_ATTACK && this.attackableSet && this.attackableSet.has(enemy.hex.key())){
+        // Soft glow around in-range opponents, using their team hue.
         const c = teamColorHex(enemy.teamKey);
-        const r = 32;
-        enemy.targetG.setBlendMode(Phaser.BlendModes.NORMAL);
-        enemy.targetG.lineStyle(4, c, 0.85);
+        const r = 34;
+        enemy.targetG.setBlendMode(Phaser.BlendModes.ADD);
+        enemy.targetG.lineStyle(18, c, 0.10);
         enemy.targetG.strokeCircle(0, 0, r);
+        enemy.targetG.lineStyle(12, c, 0.16);
+        enemy.targetG.strokeCircle(0, 0, r);
+        enemy.targetG.lineStyle(6, c, 0.26);
+        enemy.targetG.strokeCircle(0, 0, r);
+        enemy.targetG.fillStyle(c, 0.05);
+        enemy.targetG.fillCircle(0, 0, r);
       }
     }
 
@@ -4851,6 +4915,13 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
   }
 
   redrawRosterPanel(){
+    // Throttle: rebuild the roster panel at most every 150 ms to avoid
+    // destroying and recreating dozens of text objects on every redrawAll call.
+    const now = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    if (!this._rosterDirty && this._lastRosterDrawTime && (now - this._lastRosterDrawTime) < 150) return;
+    this._rosterDirty = false;
+    this._lastRosterDrawTime = now;
+
     // Destroy and remove only the dynamic roster children from the container.
     // We must NOT use removeAll(true) because that would also destroy the
     // permanent children (leftPanelBg, rosterG, turnBanner, panelInfo).
@@ -5058,6 +5129,7 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
   }
 
   redrawAll(){
+    this._rosterDirty = true;
     this.redrawBoard();
     this.positionAllUnits();
     this.redrawOverlay();
@@ -5067,12 +5139,49 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
   /* ---------- POINTER MED PACK TARGETING (simple, stable) ---------- */
   // We use modal as instruction, then next click on a player unit consumes med pack.
   update(time, delta){
-    // No per-frame highlight animation; keep gameplay visuals static for performance.
-    if (this.gShimmer) this.gShimmer.clear();
+    // Animate shimmer alpha for reachable hex highlights
+    const speed = 0.0012;
+    this._shimmerAlpha += this._shimmerDir * speed * delta;
+    if (this._shimmerAlpha >= 0.42){ this._shimmerAlpha = 0.42; this._shimmerDir = -1; }
+    if (this._shimmerAlpha <= 0.08){ this._shimmerAlpha = 0.08; this._shimmerDir = 1; }
+
+    // Throttle shimmer redraw slightly so the game feels snappier on lower-end browsers.
+    this._nextShimmerAt = this._nextShimmerAt || 0;
+    if (time >= this._nextShimmerAt){
+      this._nextShimmerAt = time + 33;
+      if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reachableMap){
+        this._drawShimmerHexes();
+      } else {
+        this.gShimmer.clear();
+      }
+    }
   }
 
   _drawShimmerHexes(){
-    if (this.gShimmer) this.gShimmer.clear();
+    if (!this.gShimmer || !this.reachableMap) return;
+    this.gShimmer.clear();
+    const alpha = this._shimmerAlpha;
+    for (const [key, dist] of this.reachableMap.entries()){
+      if (dist === 0) continue;
+      const tile = this.board.tiles.get(key);
+      if (!tile) continue;
+      const p = this.layout.hexToPixel(tile.hex);
+      const corners = this.layout.hexCorners(p.x, p.y);
+      this.gShimmer.fillStyle(0x7fffb0, alpha);
+      this.gShimmer.beginPath();
+      this.gShimmer.moveTo(corners[0].x, corners[0].y);
+      for (let i=1;i<6;i++) this.gShimmer.lineTo(corners[i].x, corners[i].y);
+      this.gShimmer.closePath();
+      this.gShimmer.fillPath();
+
+      // Animated inner ring outline
+      this.gShimmer.lineStyle(3, 0x86efac, Math.min(1, alpha * 2.2));
+      this.gShimmer.beginPath();
+      this.gShimmer.moveTo(corners[0].x, corners[0].y);
+      for (let i=1;i<6;i++) this.gShimmer.lineTo(corners[i].x, corners[i].y);
+      this.gShimmer.closePath();
+      this.gShimmer.strokePath();
+    }
   }
 
   /* ---------- END: required by our simple med pack flow ---------- */
