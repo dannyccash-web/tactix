@@ -2060,6 +2060,8 @@ class BattleScene extends Phaser.Scene {
     if (this._layoutTopRightFn) { this.scale.off("resize", this._layoutTopRightFn); this._layoutTopRightFn = null; }
     if (this._modalResizeFn)    { this.scale.off("resize", this._modalResizeFn);    this._modalResizeFn    = null; }
     if (this._attackPopResizeFn){ this.scale.off("resize", this._attackPopResizeFn); this._attackPopResizeFn = null; }
+    if (this._boardResizeFn)    { this.scale.off("resize", this._boardResizeFn);    this._boardResizeFn    = null; }
+    if (this._pointerdownHandler){ this.input.off("pointerdown", this._pointerdownHandler); this._pointerdownHandler = null; }
 
     for (const t of TEAMS) {
       ensureTeamBadges(this, t);
@@ -2185,6 +2187,8 @@ class BattleScene extends Phaser.Scene {
     this._lastRosterDrawTime = 0;
     this._overlayDirty = true;
     this._lastOverlayDrawTime = 0;
+    this._unitsDirty = true;
+    this._lastUnitsDrawTime = 0;
     if (this.ctfEnabled){
       this.flagSprite = this.add.image(0,0,"ctf_flag_token").setOrigin(0.5).setDepth(80);
       // Slightly smaller so it stays inside the tile even when the board is scaled.
@@ -2297,7 +2301,14 @@ class BattleScene extends Phaser.Scene {
 
     this.spawnUnitsEvenly();
 
-    this.input.on("pointerdown", async (p) => {
+    // Remove any leftover pointerdown handler from a previous run of this scene.
+    // scene.restart() does NOT destroy the Phaser input plugin, so without this
+    // every rematch stacks another async handler — each click fires N times after N restarts.
+    if (this._pointerdownHandler) {
+      this.input.off("pointerdown", this._pointerdownHandler);
+      this._pointerdownHandler = null;
+    }
+    this._pointerdownHandler = async (p) => {
       if (!this.inputEnabled) return;
       if (this.activeSide !== this.SIDE_PLAYER) return;
 
@@ -2424,9 +2435,11 @@ class BattleScene extends Phaser.Scene {
       } else if (this.phase === this.PHASE_ATTACK){
         this.tryAttackAtHex(key);
       }
-    });
+    };
+    this.input.on("pointerdown", this._pointerdownHandler);
 
-    this.scale.on("resize", (gs) => {
+    if (this._boardResizeFn) { this.scale.off("resize", this._boardResizeFn); this._boardResizeFn = null; }
+    this._boardResizeFn = (gs) => {
       this.bgImage.setPosition(gs.width/2, gs.height/2);
       scaleImageToCover(this.bgImage, gs.width, gs.height);
       this.dimRect.setPosition(gs.width/2, gs.height/2);
@@ -2436,7 +2449,8 @@ class BattleScene extends Phaser.Scene {
       this.fitBoard(gs.width, gs.height);
       this.boardDirty = true;
       this.redrawAll();
-    });
+    };
+    this.scale.on("resize", this._boardResizeFn);
 
     this.layoutUI(this.scale.width, this.scale.height);
     this.fitBoard(this.scale.width, this.scale.height);
@@ -3249,7 +3263,7 @@ class BattleScene extends Phaser.Scene {
           targetHex = target.hex;
         }
 
-        // --- BFS pathfinding: find the best next step toward targetHex ---
+        // --- BFS pathfinding: compute the full path once, then walk it step by step ---
         const occ = this.buildOccupiedSet();
         occ.delete(u.hex.key());
         // In CTF, base tiles are only occupiable by the flag carrier.
@@ -3262,38 +3276,39 @@ class BattleScene extends Phaser.Scene {
         const pathBlocked = new Set(occ);
         pathBlocked.delete(targetHex.key());
 
-        const path = this.board.shortestPath(u.hex, targetHex, pathBlocked);
-        // path[0] is current hex; path[1] is the next step; if target is occupied stop at path[-2]
-        let nextHex = null;
-        if (path && path.length >= 2){
-          const step = path[1];
-          // Don't actually move onto an occupied tile (stop adjacent instead)
-          if (!occ.has(step.key())){
-            nextHex = step;
+        const fullPath = this.board.shortestPath(u.hex, targetHex, pathBlocked);
+        if (!fullPath || fullPath.length < 2) break;
+
+        // Walk as many steps as unitRemaining / turnMoveRemaining allow
+        for (let step = 1; step < fullPath.length && unitRemaining > 0 && this.turnMoveRemaining > 0; step++){
+          const nextHex = fullPath[step];
+          // Stop if the next tile became occupied (another unit moved here)
+          if (occ.has(nextHex.key()) && nextHex.key() !== targetHex.key()) break;
+
+          u.hex = nextHex;
+          u.moveUsed += 1;
+          unitRemaining -= 1;
+          this.turnMoveRemaining -= 1;
+
+          await this.tweenUnitToHex(u, u.hex, 100);
+          u.redraw();
+
+          // Mine trigger
+          if (this.checkMineTriggerOnUnit(u)){
+            if (this.checkWinLose()) return;
+            unitRemaining = 0; // force exit inner loop
+            break;
           }
-        }
 
-        if (!nextHex) break;
-
-        u.hex = nextHex;
-        u.moveUsed += 1;
-        unitRemaining -= 1;
-        this.turnMoveRemaining -= 1;
-
-        await this.tweenUnitToHex(u, u.hex, 100);
-        u.redraw();
-        this.redrawAll();
-
-        // Mine trigger
-        if (this.checkMineTriggerOnUnit(u)){
+          if (this.ctfEnabled) this.tryPickupFlag(u);
           if (this.checkWinLose()) return;
-          break;
+
+          await new Promise(r => this.time.delayedCall(20, r));
         }
 
-        if (this.ctfEnabled) this.tryPickupFlag(u);
-        if (this.checkWinLose()) return;
-
-        await new Promise(r => this.time.delayedCall(20, r));
+        // Redraw once after the whole path is walked, not after each step
+        this.redrawAll();
+        break; // path is fully consumed; re-evaluate target next outer iteration if steps remain
       }
       await new Promise(r => this.time.delayedCall(60, r));
     }
@@ -4361,6 +4376,12 @@ class BattleScene extends Phaser.Scene {
   }
 
   positionAllUnits(){
+    // Throttle: unit positions and HP bars only need updating at ~20fps.
+    const now = (typeof performance !== "undefined") ? performance.now() : Date.now();
+    if (!this._unitsDirty && this._lastUnitsDrawTime && (now - this._lastUnitsDrawTime) < 50) return;
+    this._unitsDirty = false;
+    this._lastUnitsDrawTime = now;
+
     for (const u of this.playerUnits){
       // Don't snap position if a movement tween is actively running on this unit
       if (!u._moveTweenActive){
@@ -5146,6 +5167,7 @@ if (this.activeSide === "player" && this.phase === this.PHASE_MOVE && this.reach
   redrawAll(){
     this._rosterDirty = true;
     this._overlayDirty = true;
+    this._unitsDirty = true;
     this.redrawBoard();
     this.positionAllUnits();
     this.redrawOverlay();
