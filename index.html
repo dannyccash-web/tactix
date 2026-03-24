@@ -1,33 +1,151 @@
-<!doctype html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Tactix</title>
-
-  <!-- Font -->
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Geo&display=swap" rel="stylesheet">
-
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+  <title>TACTIX 2 — Turn-Based Combat</title>
   <style>
-    html, body {
-      margin: 0;
-      padding: 0;
-      width: 100%;
-      height: 100%;
-      background: #0b0f14;
-      overflow: hidden;
-      font-family: "Geo", system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+    @font-face {
+      font-family: 'Iceberg';
+      src: url('assets/fonts/Iceberg-Regular.ttf') format('truetype');
     }
-    canvas { display: block; }
+    @font-face {
+      font-family: 'RobotoMono';
+      src: url('assets/fonts/RobotoMono-Regular.ttf') format('truetype');
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    html, body {
+      width: 100%; height: 100%;
+      background: #000;
+      overflow: hidden;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Outer shell — always fills viewport */
+    #shell {
+      position: relative;
+      width: 100vw;
+      height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Game container — 16:9, scales to fit shell */
+    #game-container {
+      position: relative;
+      width: 1280px;
+      height: 720px;
+      transform-origin: center center;
+      /* JS sets transform: scale() to fit viewport */
+    }
+
+    canvas {
+      display: block;
+      width: 1280px;
+      height: 720px;
+    }
+
+    /* HTML UI overlay, sits on top of canvas in game-space */
+    #ui-layer {
+      position: absolute;
+      top: 0; left: 0;
+      width: 1280px;
+      height: 720px;
+      pointer-events: none;
+      overflow: hidden;
+    }
+    #ui-layer * { pointer-events: auto; }
+
+    /* Loading screen */
+    #loading-screen {
+      position: absolute;
+      inset: 0;
+      background: #07101a;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 200;
+      transition: opacity 0.6s;
+    }
+    #loading-screen.hidden { opacity: 0; pointer-events: none; }
+
+    #loading-title {
+      font-family: 'Iceberg', monospace;
+      font-size: 52px;
+      color: #c8d8e0;
+      letter-spacing: 10px;
+      margin-bottom: 8px;
+    }
+    #loading-subtitle {
+      font-family: 'RobotoMono', monospace;
+      font-size: 13px;
+      color: '#5a7888';
+      letter-spacing: 4px;
+      margin-bottom: 48px;
+      color: #5a7888;
+    }
+    #loading-bar-wrap {
+      width: 380px; height: 3px;
+      background: #1a2530;
+    }
+    #loading-bar {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #2a6a8a, #5ab8d8);
+      transition: width 0.08s linear;
+    }
+    #loading-label {
+      margin-top: 14px;
+      font-family: 'RobotoMono', monospace;
+      font-size: 11px;
+      color: '#384858';
+      letter-spacing: 2px;
+      color: #384858;
+    }
   </style>
 </head>
 <body>
-  <!-- Phaser 3 (CDN) -->
-  <script src="https://cdn.jsdelivr.net/npm/phaser@3.80.1/dist/phaser.min.js"></script>
+<div id="shell">
+  <div id="game-container">
+    <canvas id="game-canvas" width="1280" height="720"></canvas>
+    <div id="ui-layer"></div>
+    <div id="loading-screen">
+      <div id="loading-title">TACTIX 2</div>
+      <div id="loading-subtitle">TURN-BASED COMBAT</div>
+      <div id="loading-bar-wrap"><div id="loading-bar"></div></div>
+      <div id="loading-label">INITIALIZING...</div>
+    </div>
+  </div>
+</div>
 
-  <!-- Your game code -->
-  <script src="./main.js"></script>
+<script>
+  // Responsive scaling — keep 16:9 ratio, fill viewport
+  (function initScale() {
+    const container = document.getElementById('game-container');
+    function scale() {
+      const sw = window.innerWidth  / 1280;
+      const sh = window.innerHeight / 720;
+      const s  = Math.min(sw, sh);
+      container.style.transform = `scale(${s})`;
+    }
+    scale();
+    window.addEventListener('resize', scale);
+  })();
+</script>
+
+<script src="js/data.js"></script>
+<script src="js/engine.js"></script>
+<script src="js/board.js"></script>
+<script src="js/game.js"></script>
+<script src="js/ai.js"></script>
+<script src="js/screens.js"></script>
+<script>
+  window.addEventListener('load', () => { TactixEngine.init(); });
+</script>
 </body>
 </html>
